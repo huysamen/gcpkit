@@ -41,7 +41,7 @@ func ListQuery(
 ) ([]interface{}, *datastore.Cursor, error) {
 	it := client.Run(ctx, query)
 
-	var entities []interface{}
+	entities := make([]interface{}, 0)
 
 	for {
 		entity := generator()
