@@ -51,7 +51,12 @@ func ListQuery(
 			break
 		}
 
-		if err != nil && err != err.(*datastore.ErrFieldMismatch) {
+		if _, ok := err.(*datastore.ErrFieldMismatch); ok {
+			entities = append(entities, entity)
+			continue
+		}
+
+		if err != nil {
 			return nil, nil, err
 		}
 
