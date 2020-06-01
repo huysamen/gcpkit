@@ -19,7 +19,7 @@ func KeysQuery(ctx context.Context, client *datastore.Client, query *datastore.Q
 		}
 
 		if err != nil {
-			return nil, nil, err
+			return keys, nil, err
 		}
 
 		keys = append(keys, key)
@@ -27,7 +27,7 @@ func KeysQuery(ctx context.Context, client *datastore.Client, query *datastore.Q
 
 	cursor, err := it.Cursor()
 	if err != nil {
-		return nil, nil, err
+		return keys, nil, err
 	}
 
 	return keys, &cursor, nil
@@ -57,7 +57,7 @@ func ListQuery(
 		}
 
 		if err != nil {
-			return nil, nil, err
+			return entities, nil, err
 		}
 
 		entities = append(entities, entity)
@@ -65,7 +65,7 @@ func ListQuery(
 
 	cursor, err := it.Cursor()
 	if err != nil {
-		return nil, nil, err
+		return entities, nil, err
 	}
 
 	return entities, &cursor, nil
