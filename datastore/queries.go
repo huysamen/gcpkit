@@ -8,9 +8,69 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-func KeysQuery(ctx context.Context, client *datastore.Client, query *datastore.Query) ([]*datastore.Key, *datastore.Cursor, error) {
+func Exists(ctx context.Context, client *datastore.Client, key *datastore.Key) (exists bool, err error) {
+	query := datastore.NewQuery(key.Kind).
+		FilterField("__key__", "=", key).
+		KeysOnly().
+		Limit(1)
+
+	count, err := CountForQuery(ctx, client, query)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func Query[E any](ctx context.Context, client *datastore.Client, query *datastore.Query) (entities []*E, err error) {
 	it := client.Run(ctx, query)
-	keys := make([]*datastore.Key, 0)
+	entities = make([]*E, 0)
+
+	for {
+		e := new(E)
+
+		_, err = it.Next(e)
+		if errors.Is(err, iterator.Done) {
+			err = nil
+
+			break
+		}
+
+		var errFieldMismatch *datastore.ErrFieldMismatch
+
+		if errors.As(err, &errFieldMismatch) {
+			entities = append(entities, e)
+
+			continue
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		entities = append(entities, e)
+	}
+
+	return entities, nil
+}
+
+func QueryOne[E any](ctx context.Context, client *datastore.Client, query *datastore.Query) (entity *E, err error) {
+	entities, err := Query[E](ctx, client, query)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(entities) == 0 {
+		return nil, nil
+	}
+
+	return entities[0], nil
+}
+
+func QueryKeys(ctx context.Context, client *datastore.Client, query *datastore.Query) (keys []*datastore.Key, cursor *datastore.Cursor, err error) {
+	query = query.KeysOnly()
+	it := client.Run(ctx, query)
+	keys = make([]*datastore.Key, 0)
 
 	for {
 		key, err := it.Next(nil)
@@ -19,74 +79,29 @@ func KeysQuery(ctx context.Context, client *datastore.Client, query *datastore.Q
 		}
 
 		if err != nil {
-			return keys, nil, err
+			return nil, nil, err
 		}
 
 		keys = append(keys, key)
 	}
 
-	cursor, err := it.Cursor()
+	c, err := it.Cursor()
 	if err != nil {
-		return keys, nil, err
+		return nil, nil, err
 	}
 
-	return keys, &cursor, nil
+	cursor = &c
+
+	return keys, cursor, nil
 }
 
-func ListQuery(
-	ctx context.Context,
-	client *datastore.Client,
-	query *datastore.Query,
-	generator func() interface{},
-) ([]interface{}, *datastore.Cursor, error) {
-	it := client.Run(ctx, query)
-
-	entities := make([]interface{}, 0)
-
-	for {
-		entity := generator()
-
-		_, err := it.Next(entity)
-		if errors.Is(err, iterator.Done) {
-			break
-		}
-
-		if _, ok := err.(*datastore.ErrFieldMismatch); ok {
-			entities = append(entities, entity)
-			continue
-		}
-
-		if err != nil {
-			return entities, nil, err
-		}
-
-		entities = append(entities, entity)
-	}
-
-	cursor, err := it.Cursor()
+func CountForQuery(ctx context.Context, client *datastore.Client, query *datastore.Query) (count int, err error) {
+	keys, _, err := QueryKeys(ctx, client, query)
 	if err != nil {
-		return entities, nil, err
+		return
 	}
 
-	return entities, &cursor, nil
-}
+	count = len(keys)
 
-func Exists(ctx context.Context, client *datastore.Client, namespace string, kind string, key *datastore.Key) (bool, error) {
-	query := datastore.
-		NewQuery(kind).
-		KeysOnly().
-		Filter("__key__ =", key).
-		Limit(1)
-
-	if namespace != "" {
-		query = query.Namespace(namespace)
-	}
-
-	keys, _, err := KeysQuery(ctx, client, query)
-
-	if err != nil {
-		return false, err
-	}
-
-	return len(keys) > 0, nil
+	return
 }

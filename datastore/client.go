@@ -8,7 +8,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-func NewClient(ctx context.Context, projectID string, options ...option.ClientOption) (*datastore.Client, error) {
+func NewClient(ctx context.Context, projectID, databaseID string, options ...option.ClientOption) (client *datastore.Client, err error) {
 	var opts []option.ClientOption
 
 	if os.Getenv("DATASTORE_EMULATOR_HOST") == "" {
@@ -19,5 +19,9 @@ func NewClient(ctx context.Context, projectID string, options ...option.ClientOp
 
 	opts = append(opts, options...)
 
-	return datastore.NewClient(ctx, projectID, opts...)
+	if databaseID == "" {
+		return datastore.NewClient(ctx, projectID, opts...)
+	} else {
+		return datastore.NewClientWithDatabase(ctx, projectID, databaseID, opts...)
+	}
 }

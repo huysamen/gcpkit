@@ -1,0 +1,14 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  mock:
+    desc: Generate mocks for all the client interfaces.
+    cmds:
+      - task: mock:datastore
+
+  mock:datastore:
+    desc: Generate mocks for the Datastore client interface.
+    cmds:
+      - mockgen -destination datastore/mock/crud.go -package mock github.com/huysamen/gcpkit/datastore CRUD

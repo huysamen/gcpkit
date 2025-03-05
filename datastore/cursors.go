@@ -3,15 +3,14 @@ package datastore
 import (
 	"encoding/base64"
 	"errors"
-	"os"
 
 	"github.com/huysamen/gcpkit/utils/encryption"
 
 	"cloud.google.com/go/datastore"
 )
 
-func NewCursorCodecs() (encoder func(*datastore.Cursor) (string, error), decoder func(string) (*datastore.Cursor, error)) {
-	key := encryption.NewEncryptionKey(os.Getenv("GCPKIT_DATASTORE_CURSOR_SECRET"))
+func NewCursorCodecs(secret string) (encoder func(*datastore.Cursor) (string, error), decoder func(string) (*datastore.Cursor, error)) {
+	key := encryption.NewEncryptionKey(secret)
 
 	enc := func(cursor *datastore.Cursor) (string, error) {
 		if cursor == nil {
